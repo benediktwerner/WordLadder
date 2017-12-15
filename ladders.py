@@ -50,7 +50,7 @@ def precompute():
             word = line.strip().lower()
             words[sort_letters(word)].add(i)
     print(" Done")
-    print("Read", i, "words\n")
+    print("Read", i+1, "words\n")
 
     length = len(words)
     output_steps = length // 100
