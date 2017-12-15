@@ -5,7 +5,7 @@ Author: Benedikt Werner
 Program to compute the shortest path between two words.
 """
 
-from collections import defaultdict
+from collections import defaultdict, Counter
 import sys
 import string
 import os.path
@@ -163,15 +163,43 @@ def compute(start, goal):
     generate_output()
 
 
+def count_groups():
+    """Count the number of connected components in the word graph"""
+    print("Searching groups...")
+    todo = set(INDEX_TO_WORD.keys())
+    group_counts = []
+    while todo:
+        count = 0
+        stack = [todo.pop()]
+        done = set(stack)
+        while stack:
+            word = stack.pop(0)
+            count += 1
+            for neighbor in NEIGHBORS[word]:
+                if neighbor not in done:
+                    stack.append(neighbor)
+                    done.add(neighbor)
+                    todo.remove(neighbor)
+        group_counts.append(count)
+    print("Found a total of", len(group_counts), "groups")
+    counter = Counter(group_counts)
+    for key in sorted(counter.keys()):
+        print("{:7} groups with {:7} element(s)".format(counter[key], key))
+
+
 def main():
     """Main method"""
-    if len(sys.argv) == 2 and sys.argv[1] == "precompute":
-        precompute()
-        return
+    if len(sys.argv) == 2:
+        if sys.argv[1] == "precompute":
+            return precompute()
+        if sys.argv[1] == "groups":
+            load_data()
+            return count_groups()
     if len(sys.argv) != 3:
         print("Invalid arguments:", *sys.argv)
         print("Usage:", sys.argv[0], "startword", "goalword")
         print("Usage:", sys.argv[0], "precompute")
+        print("Usage:", sys.argv[0], "groups")
         return
     load_data()
     compute(sys.argv[1], sys.argv[2])
