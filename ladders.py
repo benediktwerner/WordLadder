@@ -98,6 +98,7 @@ def load_data():
         for line in data_file:
             line = line.strip().split(" ")
             NEIGHBORS[int(line[0])] = set(map(int, line[1:]))
+    print("Loaded precomputed data")
 
 
 def generate_path(came_from, start, goal):
@@ -171,14 +172,12 @@ def count_groups():
     while todo:
         count = 0
         stack = [todo.pop()]
-        done = set(stack)
         while stack:
             word = stack.pop(0)
             count += 1
             for neighbor in NEIGHBORS[word]:
-                if neighbor not in done:
+                if neighbor in todo:
                     stack.append(neighbor)
-                    done.add(neighbor)
                     todo.remove(neighbor)
         group_counts.append(count)
     print("Found a total of", len(group_counts), "groups")
