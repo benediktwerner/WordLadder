@@ -5,7 +5,9 @@ Author: Benedikt Werner
 Program to compute the shortest path between two words.
 """
 
-from collections import defaultdict, Counter
+from __future__ import print_function
+from collections import defaultdict
+from time import time
 import sys
 import string
 import os.path
@@ -22,6 +24,10 @@ WORDS_TO_INDEX = {}
 INDEX_TO_WORD = {}
 NEIGHBORS = {}
 
+
+##########################################################
+# Helper methods
+##########################################################
 
 def open_data(mode="r"):
     """Open the data file to read or write"""
@@ -40,6 +46,10 @@ def print_stdout(text):
     sys.stdout.write(text)
     sys.stdout.flush()
 
+
+##########################################################
+# Methods to find the shortest word ladder
+##########################################################
 
 def precompute():
     """Precompute data to speed up operation"""
@@ -78,7 +88,10 @@ def precompute():
 
             neighbors_string = " ".join(map(str, neighbors))
             for i in words[word]:
-                data_file.write(str(i) + " " + neighbors_string + "\n")
+                if neighbors_string:
+                    data_file.write("{} {}\n".format(i, neighbors_string))
+                else:
+                    data_file.write("{}\n".format(i))
     print_stdout("#"*(40-progress) + "] Done\n")
 
 
@@ -164,6 +177,10 @@ def compute(start, goal):
     generate_output()
 
 
+##########################################################
+# Additional code for fun
+##########################################################
+
 def count_groups():
     """Count the number of connected components in the word graph"""
     print("Searching groups...")
@@ -186,6 +203,80 @@ def count_groups():
         print("{:7} groups with {:7} element(s)".format(counter[key], key))
 
 
+def find_words_in_group(start_word):
+    stack = [start_word]
+    result = set(stack)
+    while stack:
+        word = stack.pop(0)
+        for neighbor in NEIGHBORS[word]:
+            if neighbor not in result:
+                stack.append(neighbor)
+                result.add(neighbor)
+    return result
+
+
+def format_time(time):
+    time = int(time)
+    if time > 3600:
+        return "{}h {}".format(time // 3600, format_time(time % 3600))
+    elif time > 60:
+        return "{}m {}".format(time // 60, format_time(time % 60))
+    return "{}s".format(time)
+
+
+def get_next_output(output):
+    if output % 1000 == 0:
+        return output + 1000
+    if output % 100 == 0:
+        return output + 100
+    return output + 10
+
+def find_longest_path(start_word):
+    """Find the longest word ladder in the group of a given word"""
+    max_start = None
+    max_end = None
+    max_length = 0
+    start_time = time()
+
+    group = find_words_in_group(WORDS_TO_INDEX[start_word])
+    length = len(group)
+    words_checked = 0
+    next_output = 10
+    print("Words to check:", length)
+
+    for start in group:
+        stack = [start]
+        done = set(stack)
+        steps_to = {start: 0}
+
+        if words_checked == next_output:
+            ellapsed = time() - start_time
+            time_left = (ellapsed / words_checked) * (length - words_checked)
+            print(words_checked, "in",  format_time(ellapsed), "- estimated time left:", format_time(time_left))
+            next_output = get_next_output(next_output)
+        words_checked += 1
+
+        while stack:
+            word = stack.pop(0)
+            curr_steps = steps_to[word]
+            for neighbor in NEIGHBORS[word]:
+                if neighbor not in done:
+                    stack.append(neighbor)
+                    done.add(neighbor)
+                    steps_to[neighbor] = curr_steps + 1
+        if steps_to[word] > max_length:
+            max_length = steps_to[word]
+            max_start = start
+            max_end = word
+            print("New longest path:", INDEX_TO_WORD[max_start], "to", INDEX_TO_WORD[max_end], "with length", max_length)
+
+    print("Longest path is from", INDEX_TO_WORD[max_start], "to", INDEX_TO_WORD[max_end], "with length", max_length)
+
+
+##########################################################
+# Main method
+##########################################################
+
 def main():
     """Main method"""
     if len(sys.argv) == 2:
@@ -196,11 +287,14 @@ def main():
             return count_groups()
     if len(sys.argv) != 3:
         print("Invalid arguments:", *sys.argv)
-        print("Usage:", sys.argv[0], "startword", "goalword")
+        print("Usage:", sys.argv[0], "<startword>", "<goalword>")
         print("Usage:", sys.argv[0], "precompute")
         print("Usage:", sys.argv[0], "groups")
+        print("Usage:", sys.argv[0], "findlongestpath", "<word_from_largest_connected_component>")
         return
     load_data()
+    if sys.argv[1] == "findlongestpath":
+        return find_longest_path(sys.argv[2])
     compute(sys.argv[1], sys.argv[2])
 
 
